@@ -1,0 +1,177 @@
+# ConoHa VPS + Claude Code + スマホ Remote Control 手順書（Mac版）
+
+## 必要なもの
+- ConoHa アカウント（https://www.conoha.jp）
+- Claude Pro アカウント（月額$20）
+- Mac（初回セットアップのみ）
+- スマホ（iOS / Android）にClaudeアプリをインストール済み
+
+---
+
+## STEP 1: ConoHa VPSでサーバーを作る
+
+1. https://cp.conoha.jp にアクセスしてログイン
+2. 左メニューの「**サーバー追加**」をクリック
+3. サービスは「**VPS**」を選択（最初から選択されている）
+4. イメージタイプの「**OS**」タブはそのままにして、下にスクロール
+5. 「**オプションを見る**」をクリック
+6. 「**スタートアップスクリプト**」の「**テンプレート**」をクリック
+7. ドロップダウンから「**Claude Code**」を選択
+8. プランを「**4GB（3,968円/月）**」に変更（※4GB未満は動かない）
+9. 「**rootパスワード**」を入力（英数字記号混じり9文字以上）→ **必ずメモしておく**
+10. 右側の「**追加**」ボタンをクリック
+11. サーバーリストに「起動中」と表示されるまで待つ（1〜2分）
+
+---
+
+## STEP 2: セキュリティグループを変更する（重要！）
+
+ConoHaのデフォルト設定は外部からのSSH接続をブロックしています。変更が必要です。
+
+1. 左メニューの「**サーバー**」をクリック
+2. 作成したサーバー名をクリック
+3. 「**ネットワーク情報**」セクションを開く
+4. 「**セキュリティグループ**」の右にある **鉛筆アイコン（編集）** をクリック
+5. 「**default**」を削除して「**IPv4v6-SSH**」を追加
+6. 「**保存**」をクリック
+
+---
+
+## STEP 3: SSHでサーバーに接続する
+
+Macの「**ターミナル**」を開く
+→ Spotlight検索（Command + Space）で「ターミナル」と入力して開く
+
+以下を入力してEnter：
+
+```
+ssh root@（サーバーのIPアドレス）
+```
+
+※IPアドレスはConoHaのサーバーリスト画面で確認できます（例：160.251.215.139）
+
+接続確認のメッセージが出たら：
+```
+yes
+```
+と入力してEnter
+
+パスワードを聞かれたら：
+→ STEP 1で設定したrootパスワードを入力してEnter
+（※入力しても画面に何も表示されないが正常）
+
+`root@vm-XXXXXXXX:~#` と表示されればログイン成功
+
+---
+
+## STEP 4: Claude Codeをインストールする
+
+```
+npm install -g @anthropic-ai/claude-code
+```
+
+「added 3 packages」と表示されれば完了
+
+---
+
+## STEP 5: tmuxを起動する
+
+tmuxはSSHを切っても中のプログラムが動き続けるツールです。
+
+```
+apt install tmux -y
+```
+
+インストール後、tmuxセッションを作成：
+
+```
+tmux new -s claude
+```
+
+画面下に緑のバーが出てくれば成功
+
+---
+
+## STEP 6: Claude Codeを起動・認証する
+
+```
+claude
+```
+
+「このフォルダを信頼しますか？」と聞かれたら：
+→ キーボードで「**1**」を押してEnter（Yes, I trust this folder）
+
+「Welcome back ○○！」と表示されれば起動成功
+
+---
+
+## STEP 7: Remote Controlを有効にしてスマホと接続する
+
+Claude Codeの画面で：
+
+```
+/remote-control
+```
+
+と入力してEnter
+
+画面に以下のように表示される：
+```
+/remote-control is active · Code in CLI or at
+https://claude.ai/code/session_XXXXXXXXXX
+```
+
+このURLをスマホのClaudeアプリで開く
+→ スマホからVPS上のClaude Codeに接続完了！
+
+---
+
+## 毎日の使い方
+
+### 普段（VPSが動き続けている場合）
+→ スマホのClaudeアプリからそのまま接続できる
+
+### VPSが再起動した場合（月1回あるかないか）
+Macのターミナルで以下を実行：
+
+```
+ssh root@（IPアドレス）
+tmux attach -t claude
+```
+
+tmuxが消えていた場合：
+```
+tmux new -s claude
+claude
+/remote-control
+```
+
+---
+
+## トラブルシューティング
+
+### SSH接続できない場合
+→ ConoHaのセキュリティグループを確認（STEP 2を再確認）
+
+### claude: command not found と出る場合
+```
+npm install -g @anthropic-ai/claude-code
+```
+を再実行
+
+### tmuxに戻りたい場合
+```
+tmux attach -t claude
+```
+
+### tmuxから一時的に抜けたい場合（セッションは残る）
+`Ctrl + B` を押してから `D` を押す
+
+---
+
+## まとめ
+
+- **VPS（ConoHa）** → 24時間動き続けるサーバー
+- **tmux** → SSH切断後もClaude Codeを動かし続ける
+- **Remote Control** → スマホからVPS上のClaude Codeを操作
+- **Claude Codeへの指示** → スマホのClaudeアプリから自然言語で送るだけ
